@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de Resposta Ouvidoria</title>
+  <style>
+    :root {
+      --primary-color: #007BFF;
+      --secondary-color: #6C757D;
+      --background: #F8F9FA;
+      --card-bg: #FFFFFF;
+      --text-color: #343A40;
+      --error-color: #DC3545;
+      --border-radius: 8px;
+      --spacing: 16px;
+      --transition: 0.3s;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: var(--background);
+      color: var(--text-color);
+      padding: var(--spacing);
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+      background: var(--card-bg);
+      padding: calc(var(--spacing) * 2);
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      font-size: 1.75rem;
+      margin-bottom: var(--spacing);
+      text-align: center;
+    }
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing);
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+    }
+    label {
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    input, select, textarea {
+      padding: 10px;
+      border: 1px solid #CED4DA;
+      border-radius: var(--border-radius);
+      transition: border-color var(--transition);
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary-color);
+      outline: none;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 200px;
+    }
+    .error { color: var(--error-color); font-size: 0.875rem; margin-top: 4px; display: none; }
+    .hidden { display: none; }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing);
+      margin-top: var(--spacing);
+      justify-content: center;
+    }
+    button {
+      background: var(--primary-color);
+      color: #FFF;
+      border: none;
+      padding: 10px 20px;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background var(--transition), transform var(--transition);
+    }
+    button:hover { background: #0056b3; transform: translateY(-2px); }
+    button:disabled {
+      background: var(--secondary-color);
+      cursor: not-allowed;
+      transform: none;
+    }
+    #result {
+      margin-top: var(--spacing);
+      height: 250px;
+      width: 100%;
+    }
+    @media (max-width: 600px) {
+      .fields { grid-template-columns: 1fr; }
+      #result { height: 200px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Gerador de Resposta Ouvidoria</h1>
+    <div class="fields">
+      <!-- Campos -->
+      <div class="field">
+        <label for="protocoloAbertura">Protocolo Abertura:</label>
+        <input type="text" id="protocoloAbertura" placeholder="Digite o número do protocolo">
+        <span class="error" id="error-protocoloAbertura">Campo obrigatório.</span>
+      </div>
+      <div class="field">
+        <label for="nomeBeneficiario">Nome do Beneficiário:</label>
+        <input type="text" id="nomeBeneficiario" placeholder="Nome do beneficiário">
+        <span class="error" id="error-nomeBeneficiario">Campo obrigatório.</span>
+      </div>
+      <div class="field">
+        <label for="dataSolicitacao">Data Solicitação / Abertura:</label>
+        <input type="date" id="dataSolicitacao">
+        <span class="error" id="error-dataSolicitacao">Campo obrigatório.</span>
+      </div>
+      <div class="field">
+        <label for="protocoloSolicitacao">Protocolo Solicitação:</label>
+        <input type="text" id="protocoloSolicitacao" placeholder="Protocolo da solicitação">
+        <span class="error" id="error-protocoloSolicitacao">Campo obrigatório.</span>
+      </div>
+      <div class="field">
+        <label for="categoria">Tipo de Indeferimento:</label>
+        <select id="categoria">
+          <option value="">-- Selecione a categoria --</option>
+          <option value="7">RECLAMAÇÃO/ELOGIO</option>
+          <option value="1">PROC EXTRA ROL SEM COMPROVAÇÃO</option>
+          <option value="2">PROCEDIMENTO FORA DA DUT</option>
+          <option value="3">REEMBOLSO INDEFERIDO</option>
+          <option value="4">EXCLUSÃO DE COBERTURA</option>
+          <option value="5">CARÊNCIA CONTRATUAL</option>
+          <option value="6">DLP</option>
+        </select>
+        <span class="error" id="error-categoria">Campo obrigatório.</span>
+      </div>
+      <div class="field">
+        <label for="procedimento">Procedimento:</label>
+        <select id="procedimento">
+          <option value="">-- Selecione o procedimento --</option>
+        </select>
+        <span class="error" id="error-procedimento">Campo obrigatório.</span>
+      </div>
+      <div class="field hidden" id="customProcedimentoField">
+        <label for="customProcedimento">Procedimento Manual:</label>
+        <input type="text" id="customProcedimento" placeholder="Digite manualmente">
+        <span class="error" id="error-customProcedimento">Campo obrigatório.</span>
+      </div>
+      <div class="field hidden" id="adesaoField">
+        <label for="dataAdesao">Data de Adesão:</label>
+        <input type="date" id="dataAdesao">
+        <span class="error" id="error-dataAdesao">Campo obrigatório.</span>
+      </div>
+    </div>
+    <div class="buttons">
+      <button id="btnGenerate" onclick="generateEmail()">Gerar E-mail</button>
+      <button onclick="copyToClipboard()">Copiar E-mail</button>
+      <button onclick="clearForm()">Limpar</button>
+    </div>
+    <textarea id="result" readonly aria-live="polite" placeholder="Seu e-mail aparecerá aqui..."></textarea>
+  </div>
+
+  <script>
+    // Procedimentos por categoria
+    const procedimentosPorCategoria = {
+      "1": ["Geral","RM - Multiparamétrica Transretal da Próstata","Selênio, Dosagem","Vitamina B1, Dosagem","Vitamina B2, Dosagem","Vitamina B3, Dosagem","Vitamina B6, Dosagem","Hormônio Anti Mülleriano","Tomografia Computadorizada Cone Beam","Anticorpos Beta 2 Glicoproteína I - IgG/IgM/IgA","Anti B2 Glicoproteína I IgG","Análise Computadorizada Segmento Anterior - Pentacam","Hidroterapia","RPG - Reeducação Postural Global"],
+      "2": ["PET-Scan Oncológico","Sequenciamento Nova Geração (NGS)","TC Angiotomografia Coronária","Mamografia Digital Bilateral","Teste Genético Intolerância à Lactose"],
+      "3": ["Possui Prestador","Sem Solicitação Prévia","Taxa Transporte/Combustível","Taxa Transporte/Pedágio","Remoção Simples - Ida e Volta"],
+      "4": ["Medicamentos","Serviço de Home Care/Atendimento Domiciliar","Polissonografia De Noite Inteira (PSG)"],
+      "5": ["90 Dias","180 Dias"],
+      "6": ["CPT/DLP"],
+	  "7": ["Agendamento","Consulta/Procedimento Efetivado","Genérico","Informação Processo/Liminar","Reajuste Feaixa Etária e Anual","Elogio"]
+    };
+
+    // Templates por combinação (mesmo texto, separadamente para edição futura)
+    const emailTemplates = {
+      "1": {
+        "Geral": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{customProcedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise acerca do procedimento solicitado acima, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "RM - Multiparamétrica Transretal da Próstata": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Selênio, Dosagem": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Vitamina B1, Dosagem": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Vitamina B2, Dosagem": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Vitamina B3, Dosagem": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Vitamina B6, Dosagem": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Hormônio Anti Mülleriano": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Tomografia Computadorizada Cone Beam": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Anticorpos Beta 2 Glicoproteína I - IgG/IgM/IgA": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Anti B2 Glicoproteína I IgG": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Análise Computadorizada Segmento Anterior - Pentacam": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Hidroterapia": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "RPG - Reeducação Postural Global": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido procedimento não consta no Rol de Procedimentos e Eventos em Saúde da ANS, atualmente regulamentado pela Resolução Normativa n°. 465/2021, bem como não se comprovou o atendimento dos critérios estabelecidos no §13° do artigo 10 da Lei n° 9656/98.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+      },
+      "2": {
+        "PET-Scan Oncológico": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Alguns procedimentos previstos no Rol e, consequentemente, de cobertura obrigatória pelas Operadoras, possuem Diretriz de Utilização, ou seja, requisitos que devem ser satisfeitos pelos usuários para terem direito à cobertura do procedimento solicitado.
+
+[INSER AQUI A DUT E A JUSTIFICATIVA DA NÃO ENQUADRAÇÃO NA DUT]
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Sequenciamento Nova Geração (NGS)": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Alguns procedimentos previstos no Rol e, consequentemente, de cobertura obrigatória pelas Operadoras, possuem Diretriz de Utilização, ou seja, requisitos que devem ser satisfeitos pelos usuários para terem direito à cobertura do procedimento solicitado.
+
+O procedimento acima solicitado consta no rol de procedimentos e eventos da ANS, porém com diretriz de utilização, conforme item 110 do anexo II da RN 465/2021, tendo cobertura obrigatória quando for solicitado pelo médico assistente (neurologista, oncologista clínico, hematologista ou geneticista), puder ser realizado em território nacional e não se enquadrar nos critérios de exclusão presentes no item 2 a seguir:
+
+110.2. A cobertura de análise molecular de DNA não é obrigatória para as patologias/síndromes, exames ou técnicas listadas a seguir:
+
+a. Ostecondromas hereditários múltiplos (exostoses hereditárias múltiplas); Neurofibromatose 1; Fenilcetonúria; Hipercolesterolemia familiar, Pesquisa dos polimorfismos C677T e A1298 do gene MTHFR e Pesquisa dos polimorfismos 4G/5G no gene PAI1.
+
+b. Exames realizados por técnicas de pesquisas em painel, tais como PCR Multiplex, CGH-Array (Hibridização Genômica Comparativa), MLPA (Multiplex Ligation-dependent Probe Amplification), Sequenciamento de Nova Geração (NGS), Sequenciamento completo de todos os éxons do Genoma Humano (Exoma) e Sequenciamento do Genoma (Genoma) humano, nutricional, esportivo, tumoral ou mitocondrial no est o contem lados na letra b do item 1. Da mesma forma, o screening de risco pessoal ou screening de planejamento familiar em paciente assintomático, não está contemplado na letra b do item 1.
+
+Ocorre que o exame acima solicitado utiliza técnica de análise NGS (Sequenciamento de Nova Geração), a qual não tem cobertura conforme item "2b" citado acima. Ademais, o exame não foi solicitado por médico neurologista, oncologista clínico, hematologista ou geneticista conforme item "1" da referida diretriz. Portanto, sem cobertura obrigatória pelas operadoras de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "TC Angiotomografia Coronária": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Alguns procedimentos previstos no Rol e, consequentemente, de cobertura obrigatória pelas Operadoras, possuem Diretriz de Utilização, ou seja, requisitos que devem ser satisfeitos pelos usuários para terem direito à cobertura do procedimento solicitado.
+
+{{procedimento}} é um procedimento que consta no ROL de eventos e procedimentos da Agência Nacional de Saúde Suplementar (ANS), porém com diretriz de utilização, conforme item 3 do Anexo II da Resolução Normativa 465/21, tendo cobertura obrigatória quando preenchido pelo menos um dos seguintes critérios:
+
+a. avaliação inicial de pacientes sintomáticos com probabilidade pré-teste de 10 a 70% calculada segundo os critérios de Diamond Forrester revisado;
+
+b. dor torácica aguda, em pacientes com TIMI RISK 1 e 2, com sintomas compatíveis com síndrome coronariana aguda ou equivalente anginoso e sem alterações isquêmicas ao ECG e marcadores de necrose miocárdica;
+
+c. para descartar doença coronariana isquêmica, em pacientes com diagnóstico estabelecido de insuficiência cardíaca (IC) recente, onde permaneça dúvida sobre a etiologia da IC mesmo após a realização de outros exames complementares;
+
+d. em pacientes com quadro clínico e exames complementares conflitantes, quando permanece dúvida diagnóstica mesmo após a realização de exames funcionais para avaliação de isquemia;
+
+e. pacientes com suspeita de coronárias anômalas.
+
+No caso do paciente em questão, não há preenchimento dos critérios da DUT, visto que: [INSERIR JUSTIFICATIVA]
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Mamografia Digital Bilateral": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Alguns procedimentos previstos no Rol e, consequentemente, de cobertura obrigatória pelas Operadoras, possuem Diretriz de Utilização, ou seja, requisitos que devem ser satisfeitos pelos usuários para terem direito à cobertura do procedimento solicitado.
+
+A MAMOGRAFIA DIGITAL é um procedimento que consta no ROL de Eventos e Procedimentos da Agência Nacional de Saúde Suplementar (ANS), porém com diretriz de utilização, conforme item 52 do Anexo II da Resolução Normativa 465/21, tendo cobertura obrigatória para mulheres na faixa etária entre 40 e 69 anos. A paciente em questão tem [INSERIR IDADE] anos, não preenchendo os critérios para cobertura obrigatória
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Teste Genético Intolerância à Lactose": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Alguns procedimentos previstos no Rol e, consequentemente, de cobertura obrigatória pelas Operadoras, possuem Diretriz de Utilização, ou seja, requisitos que devem ser satisfeitos pelos usuários para terem direito à cobertura do procedimento solicitado.
+
+O Teste Genético Para Intolerância À Lactose É Uma Analise Molecular De DNA consta no ROL de eventos e procedimentos da Agência Nacional de Saúde Suplementar (ANS), porém com diretriz de utilização, conforme item 110.1, subitem b, do anexo II da Resolução Normativa 465/21, tendo cobertura mínima obrigatória quando solicitado por neurologista, oncologista clínico, hematologista ou geneticista, puder ser realizado em território nacional na assistência/tratamento/aconselhamento das condições genéticas não contempladas nas Diretrizes dos subitens desta Diretriz de Utilização, quando o paciente apresentar sinais clínicos indicativos da doença atual ou história familiar e permanecerem dúvidas acerca do diagnóstico definitivo após a anamnese, o exame físico, a análise de heredograma e exames diagnósticos convencionais. 
+
+
+No caso em análise, o paciente não se enquadra na DUT pois [INSER AQUI A JUSTIFICATIVA DA NÃO ENQUADRAÇÃO NA DUT]
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`
+      },
+      "3": {
+        "Possui Prestador": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{customProcedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A Lei 9.656/98 prevê em seu artigo 12, inciso VI, que é exigência mínima o reembolso, em todos os tipos de produtos de que tratam o inciso I e o § 1o do art. 1o desta Lei, nos limites das obrigações contratuais, das despesas efetuadas pelo beneficiário com assistência à saúde, em casos de urgência ou emergência, quando não for possível a utilização dos serviços próprios, contratados, credenciados ou referenciados pelas operadoras, de acordo com a relação de preços de serviços médicos e hospitalares praticados pelo respectivo produto, pagáveis no prazo máximo de trinta dias após a entrega da documentação adequada.
+
+Já a Resolução Normativa nº. 465/2021, que estabelece o Rol de Procedimentos e Eventos em Saúde, em seu artigo 1º, §2º, dispõe:
+
+"A cobertura assistencial estabelecida por esta Resolução Normativa e seus anexos será obrigatória independente da circunstância e do local de ocorrência do evento que ensejar o atendimento, respeitadas as segmentações, a área de atuação e de abrangência, a rede de prestadores de serviços contratada, credenciada ou referenciada da operadora, os prazos de carência e a cobertura parcial temporária - CPT."
+
+Ressaltamos que o Hapvida dispunha, à época do atendimento, de profissionais e prestadores aptos a prestar o serviço solicitado dentro dos prazos e termos previstos pela RN 259/2011, em seu município, qual seja [INFORMAR QUEM É O PRESTADOR]. Desta forma, o pedido de reembolso não foi aprovado.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar. `,
+        "Sem Solicitação Prévia": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{customProcedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A Lei 9.656/98 prevê em seu artigo 12, inciso VI, que é exigência mínima o reembolso, em todos os tipos de produtos de que tratam o inciso I e o § 1o do art. 1o desta Lei, nos limites das obrigações contratuais, das despesas efetuadas pelo beneficiário com assistência à saúde, em casos de urgência ou emergência, quando não for possível a utilização dos serviços próprios, contratados, credenciados ou referenciados pelas operadoras, de acordo com a relação de preços de serviços médicos e hospitalares praticados pelo respectivo produto, pagáveis no prazo máximo de trinta dias após a entrega da documentação adequada.
+
+Em análise à solicitação de reembolso, foi verificado que não houve requerimento prévio à Operadora com o objetivo de buscar solução para o atendimento desejado. Ou seja, não foi registrada qualquer manifestação por parte do beneficiário acerca de dificuldades no acesso a prestadores, pertencentes ou não à Rede de Atendimento da Operadora. Dessa forma, a Operadora não teve a oportunidade de atuar previamente e indicar um prestador adequado para a realização do referido atendimento.
+
+Desta forma, o pedido de Reembolso não foi aprovado.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar. `,
+        "Taxa Transporte/Combustível": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Informamos que o serviço solicitado não possui cobertura obrigatória pelas operadoras de planos de saúde, conforme disposto no item 10 da Resolução nº 566/2022 da ANS, bem como nas cláusulas do contrato firmado. Diante disso, o Pedido de Reembolso referente a {{procedimento}} não foi aprovado, permanecendo indeferido.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Taxa Transporte/Pedágio": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Informamos que o serviço solicitado não possui cobertura obrigatória pelas operadoras de planos de saúde, conforme disposto no item 10 da Resolução nº 566/2022 da ANS, bem como nas cláusulas do contrato firmado. Diante disso, o Pedido de Reembolso referente a {{procedimento}} não foi aprovado, permanecendo indeferido.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Remoção Simples - Ida e Volta": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, e demais Resoluções Normativas complementares.
+
+A Resolução Normativa nº 347 da ANS dispõe sobre a cobertura de remoção de beneficiários de planos privados de assistência à saúde, com segmentação hospitalar, que tenham cumprido o período de carência. De acordo com o art. 3º da referida Resolução Normativa, não é de cobertura obrigatória a remoção de beneficiários de local público ou privado (ex: residência, local de trabalho, etc) que não seja uma unidade hospitalar ou serviço de pronto-atendimento.
+
+Cumpre informar, ainda, que não houve cobertura extra ofertada contratualmente, não sendo, portanto, referido procedimento de cobertura obrigatória para a operadora de planos de saúde.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`
+      },
+      "4": {
+        "Medicamentos": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Conforme o parecer técnico nº 20/GEAS/GGRAS/DIPRO/2021, da Agência Nacional de Saúde Suplementar (ANS), a cobertura de medicamentos é obrigatória nas situações listadas abaixo (respeitando-se as segmentações contratadas): 
+ 
+a) Medicamentos administrados durante o período de internação hospitalar, conforme prescrição do profissional assistente (art. 12, inciso II, alínea ¿d¿, da Lei nº 9.656/1998, c/c arts. 8º, inciso III, e 19, inciso VIII e IX, da RN n.º 465/2021); 
+ 
+b) Medicamentos utilizados em quimioterapia oncológica, conforme o art. 12, inciso II, alínea ¿g¿, da Lei nº 9.656/1998, c/c art. 19, inciso X, alínea ¿b¿, da RN n.º 465/2021: 
+
+b.1) Medicamentos antineoplásicos empregados na quimioterapia oncológica ambulatorial, isto é, medicamentos para tratamento do câncer; 
+b.2) Medicamentos para o controle de efeitos adversos relacionados ao tratamento do câncer; 
+b.3) Medicamentos adjuvantes, ou seja, os medicamentos empregados de forma associada aos quimioterápicos citostáticos com a finalidade de intensificar seu desempenho ou de atuar de forma sinérgica ao tratamento; 
+ 
+c)Medicamentos para tratamento antineoplásico domiciliar de uso oral na qualidade de procedimentos cuja necessidade esteja relacionada à continuidade da assistência prestada durante a internação hospitalar (art. 12, inciso II, alínea ¿g¿, da Lei nº 9.656/1998, c/c art. 19, inciso X, alínea ¿c¿, da RN n.º 465/2021), respeitada a Diretriz de Utilização ¿ DUT descrita no item 64, do Anexo II, da RN nº 465/2021; 
+        
+Considerando que a medicação solicitada, será aplicada em regime ambulatorial (não será aplicada em regime de internação) e considerando que você não se encontra em tratamento oncológico, conclui-se que não se enquadra em nenhuma das situações de cobertura previstas pelo parecer técnico da ANS. 
+
+Destaca-se, ainda, que o contrato de plano privado de assistência à saúde que V. Sa. se encontra vinculado não garante a assistência farmacêutica ora em análise, motivo pelo qual não há cobertura para o procedimento solicitado.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Serviço de Home Care/Atendimento Domiciliar": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, verificou-se que o referido serviço não é de cobertura obrigatória pelas operadoras de planos de saúde, conforme os termos da Lei e Resolução acima mencionadas, bem como do instrumento contratual firmado entre as partes. Cumpre salientar, ainda, que em PARECER TÉCNICO Nº 05/GCITS/GGRAS/DIPRO/2024, a Agência Nacional de Saúde Suplementar - ANS corroborou que a Lei nº 9.656/1998, não inclui a qualquer tipo de Atendimento/Serviço Domiciliar entre as coberturas obrigatórias. No mesmo sentido, a RN nº 465/2021 também não prevê cobertura obrigatória para quaisquer procedimentos executados em domicílio. 
+ 
+Dessa forma, o pedido para autorização do serviço de {{procedimento}}, não foi aprovado, por não se enquadrar em condições de cobertura obrigatória, visto inexistir previsão legal e contratual para tanto. 
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "Polissonografia De Noite Inteira (PSG)": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Após análise da solicitação de {{procedimento}}, esta restou indeferida, pois verificou-se que o(a) beneficiário(a) é contratante de plano com segmentação exclusivamente AMBULATORIAL, registrado na Agência Nacional de Saúde Suplementar - ANS sob o nº 1230705729, sem direito à internação e/ou cirurgias. É válido salientar, que o plano de cobertura ambulatorial não abrange quaisquer atendimentos que necessitem de suporte em internação hospitalar, uma vez que a referida cobertura compreende, tão
+somente, consultas médicas em clínicas ou consultórios, exames, tratamento e demais procedimentos ambulatoriais, nos termos inciso I, do art. 12 da Lei Federal n° 9.656/1998 e do art. 18 da Resolução Normativa n°. 465/2021 da Agência Nacional de Saúde Suplementar.
+
+Dessa forma, o pedido para autorização do procedimento de {{procedimento}}, não foi aprovado, por não se enquadrar em condições de cobertura contratualmente pactuadas.
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`
+      },
+      "5": {
+        "90 Dias": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Dessa forma, cumpre destacar que Vossa Senhoria contratou o plano privado de assistência à saúde em {{dataAdesao}}, contudo o procedimento solicitado possui o seguinte prazo de carência para que haja cobertura pela Operadora: 90 (noventa) dias para o procedimento solicitado. 
+ 
+Na presente data, {{dataHoje}}, V.SA cumpriu {{diffDias}} ({{diffExtenso}}) dias de carência, necessitando cumprir o tempo restante para realizar o procedimento através desta Operadora. 
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+        "180 Dias": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Dessa forma, cumpre destacar que Vossa Senhoria contratou o plano privado de assistência à saúde em {{dataAdesao}}, contudo o procedimento solicitado possui o seguinte prazo de carência para que haja cobertura pela Operadora: 180 (cento e oitenta dias) dias para o procedimento solicitado. 
+ 
+Na presente data, {{dataHoje}}, V.SA cumpriu {{diffDias}} ({{diffExtenso}}) dias de carência, necessitando cumprir o tempo restante para realizar o procedimento através desta Operadora. 
+ 
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`
+      },
+      "6": {
+        "CPT/DLP": `Ouvidoria Hapvida | Pedido de Reanálise Protocolo n° {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Em resposta ao Pedido de Reanálise por esta Ouvidoria, da decisão que indeferiu o procedimento de {{procedimento}}, solicitado em {{dataSolicitacao}}, protocolo nº {{protocoloSolicitacao}}, informamos que o processo permanece indeferido.
+
+A atuação da Operadora Hapvida está vinculada à regulação do Governo Federal, através da Agência Nacional de Saúde Suplementar - ANS, Autarquia Federal reguladora do referido setor de saúde.  As coberturas são estabelecidas pela ANS, conforme previsto no Rol de Procedimentos e Eventos em Saúde, e determinadas pela Resolução Normativa n°. 465/2021, cominada com a Lei n° 14.454/2022, que alterou a Lei n° 9656/98.
+
+Quanto ao indeferimento de cobertura do procedimento em comento, informamos que, foi declarado por V.Sa., em [DATA ASSINATURA TERMO DECLARAÇÃO CPT], conforme Termo de Aceitação de Cobertura Parcial Temporária, V.SA. possui [NOME DA DOENÇA OU LESÃO PRE-EXISTENTE], razão pela qual foi oferecido Cobertura Parcial Temporária – CPT para a referida patologia, sendo devidamente aceita, de acordo com documento que segue abaixo, consoante dispõe o art. 15, inciso I, da Resolução Normativa nº. 558/2022 da Agência Nacional de Saúde.
+
+[IMAGEM DO TERMO DE ACEITAÇÃO ASSINADO PELO BENEFICIÁRIO]
+
+Desta forma, faz-se necessário o cumprimento do prazo de 24 (vinte e quatro) meses referentes à Cobertura Parcial Temporária – CPT, contados da data da contratação do Plano de Saúde, conforme o art. 11 da Lei 9.656/98, para que tenha toda cobertura assistencial para tais doenças/lesões preexistentes à data da adesão.
+
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais de atendimento:
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`
+      },
+      "7": {
+        "Agendamento": `Ouvidoria Hapvida | Protocolo nº {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Analisamos seu relato com nº de protocolo {{protocoloAbertura}}, registrado no dia {{dataSolicitacao}}. 
+
+Durante esse período, dedicamos atenção especial ao seu caso e aproveitamos a oportunidade para dizer que conseguimos realizar o agendamento solicitado.
+
+ESPECIALIDADE/PROCEDIMENTO: XXXXXXXXXXXXXXXXXX
+MEDICO: XXXXXXXXXXXX
+DATA: XXXXXXXX
+LOCAL: XXXXXXXXXXX
+ENDERECO: XXXXXXXXXXXXXX
+PONTO DE REFERÊNCIA: XXXXXXXXXX
+
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais oficiais de atendimento: 
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+		"Consulta/Procedimento Efetivado": `Ouvidoria Hapvida | Protocolo nº {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Analisamos seu relato com nº de protocolo {{protocoloAbertura}}, registrado no dia {{dataSolicitacao}}. 
+
+Durante esse período, dedicamos atenção especial ao seu caso e aproveitamos a oportunidade para di-zer que, conforme verificamos, você efetivou consulta na especialidade solicitada/o procedimento soli-citado, no dia XXXXXXXX, às XXXX, com o Dr. XXXXXXXXXXX.
+
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais oficiais de atendimento: 
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+		"Genérico": `Ouvidoria Hapvida | Protocolo nº {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Analisamos seu relato com nº de protocolo {{protocoloAbertura}}, registrado no dia {{dataSolicitacao}}. 
+
+Durante esse período, dedicamos atenção especial ao seu caso e, conforme retorno da área responsável, diante do ocorrido o seu relato já foi repassado à Diretoria responsável para que verifique e adote as providências necessárias para evitar que isso ocorra novamente, pois prezamos melhor acolhimento humanizado. Lamentamos quanto a sua insatisfação e, estamos trabalhando para prestar o melhor atendimento possível, destacamos que o Hapvida tem como missão não só garantir acesso à saúde de qualidade, mas também garantir excelência na experiência do beneficiário.
+
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais oficiais de atendimento: 
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+		"Informação Processo/Liminar": `Ouvidoria Hapvida | Protocolo nº {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Analisamos seu relato com nº de protocolo {{protocoloAbertura}}, registrado no dia {{dataSolicitacao}}. 
+
+Durante esse período, dedicamos atenção especial ao seu caso e aproveitamos a oportunidade para dizer que, em função da ação judicial, V.Sa. receberá todas as informações quanto à solicitação nos autos do processo.
+
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais oficiais de atendimento: 
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+		"Informação Processo/Liminar": `Ouvidoria Hapvida | Protocolo nº {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Analisamos seu relato com nº de protocolo {{protocoloAbertura}}, registrado no dia {{dataSolicitacao}}. 
+
+Durante esse período, dedicamos atenção especial ao seu caso e aproveitamos a oportunidade para dizer que, em função da ação judicial, V.Sa. receberá todas as informações quanto à solicitação nos autos do processo.
+
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais oficiais de atendimento: 
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+		"Reajuste Feaixa Etária e Anual": `Ouvidoria Hapvida | Protocolo nº {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Analisamos seu relato com nº de protocolo {{protocoloAbertura}}, registrado no dia {{dataSolicitacao}}. 
+
+Durante esse período, dedicamos atenção especial ao seu caso e aproveitamos a oportunidade para dizer que, no que concerne ao reajuste questionado, explicamos que existem 2 (dois) meios de uma operadora de planos de saúde reajustar a mensalidade do contrato de seus beneficiários.
+
+De um lado, verifica-se o reajuste por mudança de faixa etária, o qual tem por objetivo adequar o valor da mensalidade do plano de saúde em razão da proporcional mudança no perfil médio de utilização dos serviços trazido pelo aumento de idade dos beneficiários, que só ocorre até a idade de 59 anos, conforme previsto no art. 15 da Lei nº 9.656/98.
+
+De outro lado, verifica-se o reajuste anual, a ser aplicado na data de aniversário do contrato, que visa à readequação periódica do valor da contraprestação pecuniária mensal em decorrência da variação de custos do setor, do índice de sinistralidade do contrato, bem como de diversos outros aspectos, todos considerados para a manutenção do equilíbrio entre a despesa advinda dos serviços médicos hospitalares disponibilizados aos usuários e a receita decorrente das mensalidades, que se dá mediante percentual autorizado anualmente pela Agência Nacional de Saúde Suplementar, conforme disciplinado no art. 9º da Resolução Normativa nº 171/08.
+
+Verificamos que, no seu caso, no ano de XXXX houve a incidência de ambos os reajustes, viste houve a mudança de faixa etária bem como o reajuste anual incide uma vez por ano, no mesmo mês em que houve adesão ao contrato.
+
+O reajuste anual ocorreu, visto que o mês de aniversário do contrato é o mês de XXXXXXX, assim, na mensalidade saúde de XXXXXXXXX/XXXX, fora aplicado o reajuste autorizado pela ANS de XX,XX% sobre o valor da mensalidade do plano saúde.
+
+Por outro lado, o reajuste por mudança de faixa etária ocorreu, visto que no mês de XXXXXXX/XXXX você completou XX anos, atingindo a sétima faixa etária, assim, fora aplicado o reajuste conforme previsão contratual de XX,XX% sobre o valor da mensalidade do seu plano saúde.
+
+Pedimos desculpas por qualquer dificuldade que você teve e reforçamos que, se precisar falar com a gente, estamos disponíveis em nossos canais oficiais de atendimento: 
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+		"Elogio": `Ouvidoria Hapvida | Protocolo nº {{protocoloAbertura}}
+
+Olá, {{nomeBeneficiario}}
+
+Sou da equipe de atendimento a Ouvidoria, do Sistema Hapvida. Espero que esteja tudo bem!
+
+Analisamos seu relato com nº de protocolo {{protocoloAbertura}}, registrado no dia {{dataSolicitacao}}. 
+
+Agradecemos pelo seu relato e por ter entrado em contato com a gente! Sua opinião é muito importante, pois nos ajuda a alcançarmos excelência em nosso atendimento.
+
+Ficamos muito felizes em saber do elogio, pois esse é o nosso principal propósito: acolher e cuidar com carinho de você e de quem você ama! 
+
+Agradecemos pelo reconhecimento e pela confiança no nosso trabalho, isso nos motiva a seguirmos firmes no nosso objetivo, que é levar saúde para quem mais precisa. Sempre que precisar, conte com a gente!
+
+Ouvidoria – https://www.hapvida.com.br/site/ouvidoria ou 4020-9091 (de 2ª a 6ª feira, exceto feriados, das 7h às 19h)
+SAC Online - http://bit.ly/hapvidafaleconosco;
+Call Center 24h (Capitais): 4002.3633 ou 4020.3633
+Call Center 24h (Pernambuco): 4002.2870
+Call Center 24h (Interiores e capitais): 0300 313 3633
+SAC 24h (exclusivo para telefones fixos): 0800 280 9130
+
+O time de Ouvidoria do Hapvida agradece o seu contato e se coloca à disposição para ajudar sempre que você precisar.`,
+      }
+    };
+
+// Converter número em palavras (até 999)
+    function numberToWords(n) {
+      const unidades = ['zero','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];
+      const dezenas = ['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'];
+      if (n < 20) return unidades[n];
+      if (n < 100) {
+        const d = Math.floor(n/10); const u = n%10;
+        return dezenas[d] + (u? ' e '+unidades[u]:'');
+      }
+      if (n < 1000) {
+        const c = Math.floor(n/100); const r = n%100;
+        const centenas = ['','cem','duzentos','trezentos','quatrocentos','quinhentos','seiscentos','setecentos','oitocentos','novecentos'];
+        return centenas[c] + (r? ' e '+numberToWords(r):'');
+      }
+      return n.toString();
+    }
+
+    // Popula procedimentos e mostra campos extras
+    function populateProcedimentos() {
+      const cat = document.getElementById('categoria').value;
+      const select = document.getElementById('procedimento');
+      select.innerHTML = '<option value="">-- Selecione o procedimento --</option>';
+      document.getElementById('customProcedimentoField').style.display = 'none';
+      document.getElementById('adesaoField').style.display = 'none';
+      (procedimentosPorCategoria[cat]||[]).forEach(p=>{
+        const opt=document.createElement('option');opt.value=p;opt.textContent=p;select.appendChild(opt);
+      });
+      if (cat==='3') document.getElementById('customProcedimentoField').style.display='block';
+      if (cat==='5') document.getElementById('adesaoField').style.display='block';
+    }
+
+    document.getElementById('categoria').addEventListener('change',populateProcedimentos);
+    document.getElementById('procedimento').addEventListener('change',function(){
+      const cat=document.getElementById('categoria').value;
+      const proc=this.value;
+      document.getElementById('customProcedimentoField').style.display=(cat==='1'&&proc==='Geral')||cat==='3'?'block':'none';
+    });
+
+    function clearErrors(){document.querySelectorAll('.error').forEach(e=>e.classList.add('hidden'));}
+    function validateFields(fields){let ok=true;fields.forEach(id=>{const el=document.getElementById(id);if(!el.value.trim()){document.getElementById(`error-${id}`).classList.remove('hidden');ok=false;}});return ok;}
+
+function generateEmail(){
+  clearErrors();
+  const cat = document.getElementById('categoria').value;
+  // Campos obrigatórios dinâmicos
+  const required = ['protocoloAbertura','nomeBeneficiario','dataSolicitacao','categoria','procedimento'];
+  if(cat !== '7') required.push('protocoloSolicitacao');
+  if(!validateFields(required)) return;
+
+  const proc = document.getElementById('procedimento').value;
+  const custom = document.getElementById('customProcedimento').value;
+  const adesaoRaw = document.getElementById('dataAdesao').value;
+  const hoje = new Date();
+  const dataHoje = hoje.toLocaleDateString('pt-BR');
+  let diffDias = '', diffExtenso = '';
+  if(adesaoRaw){
+    const parts = adesaoRaw.split('-');
+    const d = new Date(parts[0], parts[1]-1, parts[2]);
+    const ms = hoje - d;
+    diffDias = Math.floor(ms/86400000);
+    diffExtenso = numberToWords(diffDias);
+  }
+
+  // Seleciona o template, ou usa fallback
+  let template = (emailTemplates[cat] && emailTemplates[cat][proc]);
+  if(!template){
+    template =
+`Olá {{nomeBeneficiario}},
+Protocolo: {{protocoloAbertura}}${cat !== '7' ? '\\nProtocolo Solicitação: {{protocoloSolicitacao}}' : ''}
+Procedimento: {{procedimento}}
+Procedimento Manual: {{customProcedimento}}
+Data Adesão: {{dataAdesao}}
+Data Hoje: {{dataHoje}}
+Dias desde Adesão: {{diffDias}} ({{diffExtenso}})`;
+  }
+
+  const reps = {
+    protocoloAbertura: document.getElementById('protocoloAbertura').value,
+    nomeBeneficiario: document.getElementById('nomeBeneficiario').value,
+    procedimento: proc,
+    customProcedimento: custom,
+    dataAdesao: adesaoRaw? adesaoRaw.split('-').reverse().join('/') : '',
+    dataHoje: dataHoje,
+    diffDias: diffDias,
+    diffExtenso: diffExtenso,
+    dataSolicitacao: document.getElementById('dataSolicitacao').value.split('-').reverse().join('/'),
+    protocoloSolicitacao: document.getElementById('protocoloSolicitacao').value
+  };
+  Object.entries(reps).forEach(([k,v])=>{
+    template = template.replace(new RegExp(`{{${k}}}`,'g'), v);
+  });
+  document.getElementById('result').value = template;
+}
+    async function copyToClipboard(){const txt=document.getElementById('result').value;try{await navigator.clipboard.writeText(txt);}catch{document.execCommand('copy');}}
+    function clearForm(){document.querySelectorAll('input,select').forEach(e=>e.value='');document.getElementById('procedimento').innerHTML='<option value="">-- Selecione o procedimento --</option>';document.getElementById('customProcedimentoField').style.display='none';document.getElementById('adesaoField').style.display='none';clearErrors();document.getElementById('result').value='';}
+    window.onload=clearForm;
+  </script>
+</body>
+</html>
